@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BITCHES</title>
+    <script src="webglinit.js"></script>
+    <script src="shapes.js"></script>
+    <script src="main.js"></script>
+
+    <script id="2dVertexShader" type="notjs">
+		attribute vec4 a_position;
+		attribute vec3 a_color;
+        attribute vec3 a_normals;
+		varying vec3 v_color;
+
+		uniform vec3 u_translation;
+		uniform vec3 u_rotation;
+		uniform vec3 u_scale;
+
+		vec4 PositionObject(vec4 pos)
+		{
+			mat4 translateM = mat4(1.0,0.0,0.0,0.0,
+									0.0,1.0,0.0,0.0,
+									0.0,0.0,1.0,0.0,
+									u_translation.x, u_translation.y, u_translation.z, 1.0);
+			return translateM*pos;
+		}
+
+		vec4 ScaleObject(vec4 pos)
+		{
+			if(length(u_scale) == 0.0)
+				return pos;
+
+			mat4 scaleM = mat4(u_scale.x,0.0,0.0,0.0,
+								0.0, u_scale.y, 0.0, 0.0,
+								0.0,0.0,u_scale.z,0.0,
+								0.0,0.0,0.0,1.0);
+
+			return scaleM*pos;
+		}
+
+		vec4 RotateObject(vec4 pos)
+		{
+			vec3 c = cos(u_rotation);
+			vec3 s = sin(u_rotation);
+
+			mat4 Rx = mat4(1.0, 0.0, 0.0, 0.0,
+						   0.0, c.x, s.x, 0.0,
+						   0.0, -s.x, c.x, 0.0,
+						   0.0, 0.0, 0.0, 1.0);
+
+			mat4 Ry = mat4(c.y, 0.0, -s.y, 0.0,
+							0.0, 1.0, 0.0, 0.0,
+							s.y, 0.0, c.y, 0.0,
+							0.0, 0.0, 0.0, 1.0);
+			
+
+			mat4 Rz = mat4(c.z, s.z, 0.0, 0.0,
+							-s.z, c.z, 0.0, 0.0,
+							0.0, 0.0, 1.0,0.0,
+							0.0, 0.0, 0.0, 1.0);
+			return (Rx * Ry * Rz) * pos;
+		}
+
+        //This was added for camera move
+        uniform vec3 cameraLoc;
+        uniform vec3 cameraRotation;
+        uniform float near;
+        uniform float far;
+        uniform float aspect;
+        uniform float fov;
+                
+        vec4 MoveCamera(vec4 pos)
+        {
+        vec3 cw = cos(cameraRotation);
+        vec3 sw = sin(cameraRotation);
+
+        mat4 translateView = mat4(
+                    1.0,0.0,0.0,0.0,
+                    0.0,1.0,0.0,0.0,
+                    0.0,0.0,-1.0,0.0,
+                    -1.0*cameraLoc.x,-1.0*cameraLoc.y,cameraLoc.z,1.0
+                    );
+                    
+        mat4 rotateYView = mat4(
+                    cw.y,0.0,-1.0*sw.y,0.0,
+                    0.0,1.0,0.0,0.0,
+                    sw.y,0.0,cw.y,0.0,
+                    0.0,0.0,0.0,1.0
+                    );
+                                
+        mat4 rotateXView = mat4(
+                    1.0,	0.0,		0.0,	0.0,
+                    0.0,	cw.x,		sw.x,	0.0,
+                    0.0,	-1.0*sw.x, 	cw.x,	0.0,
+                    0.0,	0.0,		0.0,	1.0
+                            );
+
+        mat4 rotateZView = mat4(
+                    cw.z,		sw.z,		0.0,	0.0,
+                    -1.0*sw.z, 	cw.z,		0.0,	0.0,
+                    0.0,		0.0,		1.0,	0.0,
+                    0.0,		0.0,		0.0,	1.0
+                            );		
+        return rotateXView*rotateYView*rotateZView*translateView*pos;
+        }
+
+        vec4 ApplyProjection(vec4 pos)
+        {
+
+            float f = 1.0 / tan(fov/2.0);
+            float rangeInv = 1.0 / (near - far);
+
+            mat4 ComplexPerspective = mat4(
+                f / aspect, 0.0, 0.0, 0.0,
+                0.0, f, 0.0, 0.0,
+                0.0, 0.0, (near + far) * rangeInv, -1.0,
+                0.0, 0.0, near * far * rangeInv * 2.0, 0.0
+            );
+
+            return ComplexPerspective*pos;
+        }
+                
+
+        //End of Camera Move
+
+		void main()
+		{
+		gl_PointSize = 10.0;
+		v_color = a_color*dot(vec3(0.0, 1.0, 0.0), a_normals);
+		gl_Position=ApplyProjection(MoveCamera(PositionObject(RotateObject(ScaleObject(a_position)))));
+		}
+    </SCRIPT>
+    <script id="2dFragmentShader" type="notjs">
+		//Fragment shaders do not have precision so we have to set it.
+		precision mediump float;
+		varying vec3 v_color;
+		void main()
+		{
+		    gl_FragColor = vec4(v_color, 1);
+		}
+    </script>
+</head>
+<body>
+    <canvas id="myCanvas" width="700" height="550" style="border: 5px solid black;">YOUR BROWSER DOESNT SUPPORT WEBGL</canvas>
+    <script>
+        setupMain();
+    </script>
+</body>
+</html>
