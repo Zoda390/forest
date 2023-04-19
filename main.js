@@ -68,21 +68,57 @@ class Main{
                 this.decorations.push(new Rock(x, -0.9+(s/3), z, s));
             }
         }
+        this.decorations.push(new Moon(20*5,5*5,20*5,5))
 
-        this.dirLight = null; //new DirLight()
         this.pointLights = [];
+        this.pointLights.push(
+            new PointLight(
+                new Point(this.cam.loc[0], 0.0, this.cam.loc[2]),
+                0, 255, 255,
+                0.5, 50
+            )
+        )
+        for(let i = 0; i < 5; i++){
+            this.pointLights.push(
+                new PointLight(
+                    new Point((Math.random()*40)-20, 0.0, (Math.random()*40)-20),
+                    255, 255, 0,
+                    0.7, 50
+                )
+            )
+        }
         this.spotLights = [];
+        for(let i = 0; i < 1; i++){
+            this.spotLights.push(
+                new SpotLight(
+                    new Point(0.0,  1.0, 10.0),
+                    new Point(0.0, -1.0, 0.0),
+                    255, 0, 0, 16
+                )
+            )
+        }
 
         this.prevTime = 0;
         requestAnimationFrame(this.main);
     }
 
     updateAll(deltaTime){
+        for(var i in this.pointLights){
+            this.pointLights[i].update(deltaTime);
+        }
         for(var i in this.spotLights){
             this.spotLights[i].update(deltaTime);
         }
 
         this.cam.update(deltaTime);
+        this.pointLights[0].p.loc[0] = m.cam.loc[0];
+        this.pointLights[0].p.loc[1] = m.cam.loc[1];
+        this.pointLights[0].p.loc[2] = m.cam.loc[2];
+        this.pointLights[0].loc = this.pointLights[0].p.loc;
+
+        if(Math.abs(this.cam.loc[0] - this.spotLights[0].loc[0]) < (1) && Math.abs(this.cam.loc[2] - this.spotLights[0].loc[2]) < (1)){
+            this.cam.loc = [0,-0.5,0];
+        }
     }
 
     renderAll(){
@@ -92,11 +128,21 @@ class Main{
         for(var i in this.decorations){
             this.decorations[i].render();
         }
-        //this.dirLight.render();
+        let location;
         for(var i in this.pointLights){
+            location = gl.getUniformLocation(program, "pointLightsXYZI["+i+"]");
+            gl.uniform4fv(location, new Float32Array(this.pointLights[i].toBuffer()[0]));
+            location = gl.getUniformLocation(program, "pointLightsRGBF["+i+"]");
+            gl.uniform4fv(location, new Float32Array(this.pointLights[i].toBuffer()[1]));
             this.pointLights[i].render();
         }
         for(var i in this.spotLights){
+            location = gl.getUniformLocation(program, "spotLightsXYZ["+i+"]");
+            gl.uniform3fv(location, new Float32Array(this.spotLights[i].toBuffer()[0]));
+            location = gl.getUniformLocation(program, "spotLightsRGB["+i+"]");
+            gl.uniform3fv(location, new Float32Array(this.spotLights[i].toBuffer()[1]));
+            location = gl.getUniformLocation(program, "spotLightsDirA["+i+"]");
+            gl.uniform4fv(location, new Float32Array(this.spotLights[i].toBuffer()[2]));
             this.spotLights[i].render();
         }
         
@@ -151,10 +197,16 @@ class Camera{
     update(deltaTime){
         if(this.keys["%"]){ //rotate left
             this.rot[1] -= this.rotSpeed*deltaTime;
+            if(this.rot[1]<-Math.PI){
+                this.rot[1]=Math.PI;
+            }
             this.rotateForward(this.rotSpeed*deltaTime);
         }
         if(this.keys["'"]){ //rotate right
             this.rot[1] += this.rotSpeed*deltaTime;
+            if(this.rot[1]>Math.PI){
+                this.rot[1]=-Math.PI;
+            }
             this.rotateForward(-this.rotSpeed*deltaTime);
         }
 
