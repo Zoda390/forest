@@ -29,12 +29,12 @@ class Main{
         let fragShader = this.glInit.createShader(gl.FRAGMENT_SHADER, fragSource);
 
         if(vertShader == undefined){
-            console.error("vert is non-gay");
+            console.error("vert is broken");
             return;
         }
 
         if(fragShader == undefined){
-            console.error("frag is non-gay");
+            console.error("frag is broken");
             return;
         }
         program = this.glInit.createProgram(vertShader, fragShader);
